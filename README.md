@@ -1,6 +1,6 @@
 # TalkWave - Real-time Chat Application
 
-A modern real-time chat application built with React, TypeScript, Firebase Realtime Database, and Firebase Storage, featuring a beautiful sky blue and white design aesthetic with instant messaging, file sharing, and seamless real-time communication.
+A modern real-time chat application built with React, TypeScript, Firebase Cloud Firestore, and Firebase Storage, featuring a beautiful sky blue and white design aesthetic with instant messaging, file sharing, and seamless real-time communication.
 
 ## 🏗️ Architecture Overview
 
@@ -19,7 +19,7 @@ This application follows a clean architecture pattern with clear separation of c
 
 ### **Data Layer** (`/src/services`)
 - **Firebase Authentication**: Google OAuth integration
-- **Firebase Realtime Database**: Real-time message synchronization
+- **Firebase Cloud Firestore**: Real-time message synchronization
 - **Firebase Storage**: File and media storage
 - **API Abstractions**: Clean interfaces for external services
 
@@ -51,11 +51,11 @@ TalkWave leverages the full power of Firebase services to deliver a seamless rea
 - **Profile Synchronization**: Automatic user data updates
 - **Security Rules**: Protected user authentication flow
 
-### **Firebase Realtime Database**
-- **Real-time Messaging**: Instant message delivery and synchronization
+### **Firebase Cloud Firestore**
+- **Real-time Messaging**: Instant message delivery and synchronization via snapshot listeners
 - **Live User Status**: Online/offline presence detection
 - **Message Threading**: Conversation-based message organization
-- **Offline Support**: Message queuing when connection is lost
+- **Offline Support**: Local cache persistence
 - **Real-time Listeners**: Live updates without polling
 
 ### **Firebase Storage**
@@ -67,7 +67,7 @@ TalkWave leverages the full power of Firebase services to deliver a seamless rea
 
 ### **Database Schema Structure**
 
-#### Realtime Database Structure:
+#### Cloud Firestore Collections & Documents Structure:
 ```json
 {
   "users": {
@@ -171,7 +171,7 @@ TalkWave leverages the full power of Firebase services to deliver a seamless rea
 ## 🚀 Features
 
 ### **Core Real-time Features**
-- **Instant Messaging**: Real-time message delivery with Firebase Realtime Database
+- **Instant Messaging**: Real-time message delivery with Firebase Cloud Firestore
 - **Live Typing Indicators**: See when users are typing in real-time
 - **Online Presence**: Real-time online/offline status updates
 - **Message Synchronization**: Seamless cross-device message sync
@@ -204,7 +204,7 @@ TalkWave leverages the full power of Firebase services to deliver a seamless rea
 - Node.js 18+ and npm/yarn
 - Firebase project with the following services enabled:
   - **Authentication** (Google provider)
-  - **Realtime Database** 
+  - **Cloud Firestore**
   - **Storage**
   - **Hosting** (optional)
 
@@ -219,8 +219,8 @@ TalkWave leverages the full power of Firebase services to deliver a seamless rea
    - Enable Google sign-in provider
    - Add your domain to authorized domains
 
-3. **Setup Realtime Database**
-   - Go to Realtime Database
+3. **Setup Cloud Firestore**
+   - Go to Firestore Database
    - Create database in test mode (configure security rules later)
    - Choose your preferred region
 
@@ -277,35 +277,13 @@ VITE_APP_ENVIRONMENT=development
 
 ### **Firebase Security Rules**
 
-#### Realtime Database Rules (`database.rules.json`):
-```json
-{
-  "rules": {
-    "users": {
-      "$uid": {
-        ".read": "$uid === auth.uid || root.child('users').child(auth.uid).child('friends').child($uid).exists()",
-        ".write": "$uid === auth.uid"
-      }
-    },
-    "conversations": {
-      "$conversationId": {
-        ".read": "root.child('conversations').child($conversationId).child('participants').child(auth.uid).exists()",
-        ".write": "root.child('conversations').child($conversationId).child('participants').child(auth.uid).exists()"
-      }
-    },
-    "messages": {
-      "$conversationId": {
-        ".read": "root.child('conversations').child($conversationId).child('participants').child(auth.uid).exists()",
-        "$messageId": {
-          ".write": "auth.uid === newData.child('senderId').val() && root.child('conversations').child($conversationId).child('participants').child(auth.uid).exists()"
-        }
-      }
-    },
-    "friendRequests": {
-      ".read": "auth != null",
-      "$requestId": {
-        ".write": "auth.uid === newData.child('fromUserId').val() || auth.uid === newData.child('toUserId').val()"
-      }
+#### Cloud Firestore Rules (`firestore.rules`):
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
@@ -347,7 +325,7 @@ src/
 ## 🔧 Technical Implementation
 
 ### **Real-time Architecture**
-- **Firebase Realtime Database**: WebSocket-based real-time synchronization
+- **Firebase Cloud Firestore**: Real-time synchronization via snapshot listeners
 - **Event-driven Updates**: Reactive UI updates based on database changes
 - **Optimistic UI**: Immediate local updates with server confirmation
 - **Connection Management**: Automatic reconnection and offline handling
@@ -385,7 +363,7 @@ src/
 ## 🎯 Development Roadmap
 
 ### **Phase 1: Core Real-time Infrastructure** ✅
-- [x] Firebase Realtime Database integration
+- [x] Firebase Cloud Firestore integration
 - [x] User authentication with Google OAuth
 - [x] Real-time message synchronization
 - [x] Basic chat interface with sky blue theme
@@ -455,7 +433,7 @@ We welcome contributions to TalkWave! Please follow these guidelines:
 - Implement proper error handling and loading states
 - Ensure responsive design across all devices
 - Maintain consistent UI/UX with the sky blue theme
-- Optimize for Firebase Realtime Database performance
+- Optimize for Firebase Cloud Firestore performance
 
 ## 📊 Performance Metrics
 
