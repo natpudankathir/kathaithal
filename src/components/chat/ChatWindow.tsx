@@ -246,8 +246,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, user, onBa
             <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mb-4">
               <Send className="w-8 h-8 text-primary-600" />
             </div>
-            <p className="text-lg font-medium">Start a conversation</p>
-            <p className="text-sm">Send a message to {otherParticipant?.displayName}</p>
+            <p className="text-xl font-bold text-secondary-800">கதைப்போமா?</p>
+            <p className="text-sm text-secondary-500">Send a message to start chatting with {otherParticipant?.displayName}</p>
           </div>
         ) : (
           messages.map((msg, index) => {
@@ -447,7 +447,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, user, onBa
                 }
               }}
               onFocus={() => SoundService.playButtonClick()}
-              placeholder="Type a message..."
+              placeholder="கதைப்போமா?... Type a message"
               disabled={sending}
               className="w-full px-4 py-3 pr-12 border border-primary-200 rounded-2xl 
                         focus:ring-2 focus:ring-primary-300 focus:border-transparent resize-none 

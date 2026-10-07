@@ -77,9 +77,9 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onFri
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-                TalkWave
+                Kathaithal
               </h1>
-              <p className="text-xs text-secondary-500">Real-time Chat</p>
+              <p className="text-xs text-secondary-500">கதைப்போமா? • Instant Chat</p>
             </div>
           </div>
           <button

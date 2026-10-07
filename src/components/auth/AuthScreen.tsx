@@ -17,16 +17,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSignIn, loading, error
             <MessageCircle className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent mb-2">
-            TalkWave
+            Kathaithal
           </h1>
-          <p className="text-secondary-600 text-lg">Connect with friends in real-time</p>
+          <p className="text-secondary-600 text-lg">நண்பர்களோடு கதைப்போமா? • Connect in real-time</p>
         </div>
 
         {/* Sign In Card */}
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-primary-200">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-secondary-800 mb-2">Welcome to TalkWave</h2>
-            <p className="text-secondary-600">Sign in with Google to start chatting</p>
+            <h2 className="text-2xl font-bold text-secondary-800 mb-1">கதைப்போமா?</h2>
+            <p className="text-sm font-medium text-primary-600 mb-2">Welcome to Kathaithal</p>
+            <p className="text-secondary-600 text-sm">Sign in with Google to start chatting</p>
           </div>
 
           {error && (

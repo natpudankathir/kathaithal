@@ -27,8 +27,9 @@ export const LoadingScreen: React.FC = () => {
         <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
           <LoadingSpinner size="lg\" className="border-primary-200 border-t-white" />
         </div>
-        <h2 className="text-xl font-semibold text-secondary-800 mb-2">Loading TalkWave</h2>
-        <p className="text-secondary-600">Please wait while we set up your chat experience</p>
+        <h2 className="text-xl font-semibold text-secondary-800 mb-1">கதைக்கத் தயாராகிறது...</h2>
+        <p className="text-sm text-primary-600 mb-2">Loading Kathaithal</p>
+        <p className="text-secondary-600 text-sm">Please wait while we connect your chats</p>
       </div>
     </div>
   );

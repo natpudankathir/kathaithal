@@ -25,9 +25,9 @@ export const Navigation: React.FC<NavigationProps> = ({
           </div>
           <div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-              TalkWave
+              Kathaithal
             </h1>
-            <p className="text-xs text-secondary-500 -mt-1">Real-time Chat</p>
+            <p className="text-xs text-secondary-500 -mt-1">கதைப்போமா? • Instant Chat</p>
           </div>
         </div>
 

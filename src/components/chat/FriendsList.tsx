@@ -90,7 +90,7 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
       console.log('Conversation created/found with ID:', conversationId);
       
       // Show success message and play sound
-      setAddFriendSuccess(`Conversation started with ${foundUser.displayName || foundUser.email}!`);
+      setAddFriendSuccess(`இணைந்தாச்சு, கதைப்போமா? • Chat started with ${foundUser.displayName || foundUser.email}!`);
       SoundService.playComplexNotification();
       
       // Force refresh conversations immediately - try multiple times to ensure it loads
@@ -308,7 +308,7 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
             <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4 animate-in zoom-in duration-300" />
             <p className="text-gray-500 text-sm">
               {conversations.length === 0 
-                ? "No conversations yet. Add a friend to start chatting!" 
+                ? "இன்னும் உரையாடல்கள் இல்லை • Add a friend to start chatting!" 
                 : "No conversations match your search."
               }
             </p>
@@ -376,7 +376,7 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 truncate">
-                      {conversation.lastMessage?.content || 'Start a conversation...'}
+                      {conversation.lastMessage?.content || 'கதைப்போமா?... (Start chatting)'}
                     </p>
                   </div>
                 </button>
