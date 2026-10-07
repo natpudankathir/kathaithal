@@ -31,6 +31,11 @@ export class FirestoreService {
   static getConversationsSimple = ConversationService.getConversationsSimple;
   static createOrGetConversation = ConversationService.createOrGetConversation;
   static subscribeToConversations = ConversationService.subscribeToConversations;
+  static createGroupConversation = ConversationService.createGroupConversation;
+  static addParticipantsToGroup = ConversationService.addParticipantsToGroup;
+  static removeParticipantFromGroup = ConversationService.removeParticipantFromGroup;
+  static updateGroupName = ConversationService.updateGroupName;
+  static deleteConversation = ConversationService.deleteConversation;
   
   // Message operations - delegate to MessageService
   static sendMessage = MessageService.sendMessage;
@@ -40,6 +45,7 @@ export class FirestoreService {
   static sendMessageWithFile = MessageService.sendMessageWithFile;
   static subscribeToMessages = MessageService.subscribeToMessages;
   static uploadFile = MessageService.uploadFile;
+  static deleteMessage = MessageService.deleteMessage;
 
   // Legacy methods that delegate to AuthService (for backward compatibility)
   static async createUser(_user: any): Promise<void> {

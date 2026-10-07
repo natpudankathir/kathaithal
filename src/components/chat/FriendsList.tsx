@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, LogOut, Search, UserPlus, X } from 'lucide-react';
+import { MessageCircle, LogOut, Search, UserPlus, Users, X, Volume2, VolumeX, Trash2 } from 'lucide-react';
 import { User, Conversation } from '../../types';
 import { FirestoreService, SoundService } from '../../services/firebase';
+import { CreateGroupModal } from './CreateGroupModal';
+import { maskEmail } from '../../utils/mask';
 
 interface FriendsListProps {
   user: User;
@@ -14,10 +16,21 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddFriend, setShowAddFriend] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [isMuted, setIsMuted] = useState(SoundService.getIsMuted());
   const [addFriendEmail, setAddFriendEmail] = useState('');
   const [addFriendLoading, setAddFriendLoading] = useState(false);
   const [addFriendError, setAddFriendError] = useState('');
   const [addFriendSuccess, setAddFriendSuccess] = useState('');
+
+  // Listen to mute state changes across app
+  useEffect(() => {
+    const handleMuteChange = (e: any) => {
+      setIsMuted(e.detail.isMuted);
+    };
+    window.addEventListener('kathaithal_sound_mute_changed', handleMuteChange);
+    return () => window.removeEventListener('kathaithal_sound_mute_changed', handleMuteChange);
+  }, []);
 
   // Load conversations with real-time updates
   useEffect(() => {
@@ -90,7 +103,7 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
       console.log('Conversation created/found with ID:', conversationId);
       
       // Show success message and play sound
-      setAddFriendSuccess(`இணைந்தாச்சு, கதைப்போமா? • Chat started with ${foundUser.displayName || foundUser.email}!`);
+      setAddFriendSuccess(`இணைந்தாச்சு, கதைப்போமா? • Chat started with ${foundUser.displayName || maskEmail(foundUser.email)}!`);
       SoundService.playComplexNotification();
       
       // Force refresh conversations immediately - try multiple times to ensure it loads
@@ -195,10 +208,34 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
             </div>
             <div>
               <h2 className="font-semibold text-gray-800">{user.displayName}</h2>
-              <p className="text-xs text-gray-500 truncate max-w-[150px]">{user.email}</p>
+              <p className="text-xs text-gray-500 truncate max-w-[150px]">{maskEmail(user.email)}</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            <button
+              onClick={() => {
+                SoundService.toggleMute();
+              }}
+              className={`p-2 rounded-lg transition-all duration-200 transform hover:scale-110 active:scale-95 shadow-md hover:shadow-lg ${
+                isMuted
+                  ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                  : 'hover:bg-primary-100 text-gray-600'
+              }`}
+              title={isMuted ? 'ஒலி இயக்கு • Unmute Sound' : 'ஒலி முடக்கு • Mute Sound'}
+            >
+              {isMuted ? <VolumeX className="w-5 h-5 text-amber-600" /> : <Volume2 className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={() => {
+                SoundService.playButtonClick();
+                setShowCreateGroup(true);
+              }}
+              className="p-2 hover:bg-primary-100 rounded-lg transition-all duration-200 
+                        transform hover:scale-110 active:scale-95 shadow-md hover:shadow-lg text-primary-700"
+              title="New Group (புதிய குழு)"
+            >
+              <Users className="w-5 h-5 text-primary-600" />
+            </button>
             <button
               onClick={() => {
                 SoundService.playButtonClick();
@@ -316,8 +353,17 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
         ) : (
           <div className="space-y-2">
             {filteredConversations.map((conversation, index) => {
-              const otherParticipant = conversation.participantDetails.find(p => p.uid !== user.uid);
-              if (!otherParticipant) return null;
+              const isGroup = !!conversation.isGroup;
+              const otherParticipant = !isGroup
+                ? conversation.participantDetails.find(p => p.uid !== user.uid)
+                : null;
+
+              if (!isGroup && !otherParticipant) return null;
+
+              const title = isGroup ? (conversation.groupName || 'குழு • Group') : otherParticipant?.displayName;
+              const subtitle = conversation.lastMessage
+                ? (isGroup ? `${conversation.lastMessage.senderName}: ${conversation.lastMessage.content}` : conversation.lastMessage.content)
+                : (isGroup ? `${conversation.participants.length} உறுப்பினர்கள் • Members` : 'கதைப்போமா?... (Start chatting)');
 
               return (
                 <button
@@ -326,7 +372,7 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
                     SoundService.playButtonClick();
                     onConversationSelect(conversation);
                   }}
-                  className="w-full flex items-center space-x-3 p-3 bg-white hover:bg-primary-50 
+                  className="w-full group flex items-center space-x-3 p-3 bg-white hover:bg-primary-50 
                             rounded-lg border border-transparent hover:border-primary-200 
                             transition-all duration-200 text-left transform hover:scale-[1.02] 
                             active:scale-[0.98] shadow-md hover:shadow-lg
@@ -335,7 +381,11 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
                 >
                   {/* Avatar */}
                   <div className="relative flex-shrink-0">
-                    {otherParticipant.photoURL ? (
+                    {isGroup ? (
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary-600 to-indigo-600 text-white flex items-center justify-center border-2 border-white shadow-md">
+                        <Users className="w-6 h-6 text-white" />
+                      </div>
+                    ) : otherParticipant?.photoURL ? (
                       <>
                         <img
                           src={otherParticipant.photoURL}
@@ -353,10 +403,10 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
                     ) : (
                       <div className="w-12 h-12 rounded-full bg-primary-500 text-white text-lg font-semibold flex items-center justify-center border-2 border-white shadow-md
                                       transform transition-all duration-300 hover:scale-110">
-                        {otherParticipant.displayName?.charAt(0).toUpperCase() || 'U'}
+                        {otherParticipant?.displayName?.charAt(0).toUpperCase() || 'U'}
                       </div>
                     )}
-                    {otherParticipant.isOnline && (
+                    {!isGroup && otherParticipant?.isOnline && (
                       <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full
                                       animate-pulse shadow-md"></div>
                     )}
@@ -365,26 +415,83 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-gray-800 truncate">
-                        {otherParticipant.displayName}
-                      </h3>
+                      <div className="flex items-center space-x-1.5 min-w-0">
+                        <h3 className="font-semibold text-gray-800 truncate">
+                          {title}
+                        </h3>
+                        {isGroup && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-primary-100 text-primary-700 font-medium rounded-full flex-shrink-0">
+                            குழு
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-gray-500 flex-shrink-0">
                         {conversation.lastMessage 
                           ? formatLastSeen(conversation.lastMessage.createdAt)
-                          : formatLastSeen(otherParticipant.lastSeen)
+                          : formatLastSeen(otherParticipant?.lastSeen || conversation.createdAt)
                         }
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 truncate">
-                      {conversation.lastMessage?.content || 'கதைப்போமா?... (Start chatting)'}
+                      {subtitle}
                     </p>
                   </div>
+
+                  {/* Delete Conversation Button */}
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!window.confirm(`Delete conversation "${title}"? / இந்த உரையாடலை நீக்கவா?`)) {
+                        return;
+                      }
+                      SoundService.playButtonClick();
+                      try {
+                        await FirestoreService.deleteConversation(conversation.id, currentUser.uid);
+                        setConversations((prev) => prev.filter((c) => c.id !== conversation.id));
+                      } catch (err) {
+                        console.error('Error deleting conversation:', err);
+                        SoundService.playError();
+                      }
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all ml-1 flex-shrink-0"
+                    title="Delete Conversation (உரையாடலை நீக்கு)"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </button>
               );
             })}
           </div>
         )}
       </div>
+
+      {showCreateGroup && (
+        <CreateGroupModal
+          currentUser={user}
+          availableUsers={Array.from(
+            new Map(
+              conversations
+                .flatMap((c) => c.participantDetails)
+                .filter((p) => p && p.uid !== user.uid)
+                .map((p) => [p.uid, p])
+            ).values()
+          )}
+          onClose={() => setShowCreateGroup(false)}
+          onGroupCreated={async (newId) => {
+            try {
+              const refreshed = await FirestoreService.getConversations(user.uid);
+              setConversations(refreshed);
+              const newGroup = refreshed.find((c) => c.id === newId);
+              if (newGroup) {
+                onConversationSelect(newGroup);
+              }
+            } catch (err) {
+              console.error('Error refreshing after group creation:', err);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

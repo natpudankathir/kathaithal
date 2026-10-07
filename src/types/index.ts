@@ -29,6 +29,13 @@ export interface Conversation {
   lastMessageAt: Date;
   unreadCount: Record<string, number>;
   createdAt: Date;
+  isGroup?: boolean;
+  groupName?: string;
+  groupPhotoURL?: string;
+  createdById?: string;
+  isDeleted?: boolean;
+  deletedAt?: Date;
+  deletedBy?: string;
 }
 
 // Message Types (optimized for subcollection storage)
@@ -46,6 +53,9 @@ export interface Message {
   readBy: string[];
   createdAt: Date;
   updatedAt?: Date;
+  isDeleted?: boolean;
+  deletedAt?: Date;
+  deletedBy?: string;
 }
 
 // Auth Types

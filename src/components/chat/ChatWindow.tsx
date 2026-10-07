@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, Smile, Paperclip, Image, FileText } from 'lucide-react';
+import { Send, ArrowLeft, Smile, Paperclip, Image, FileText, Users, Volume2, VolumeX, Trash2 } from 'lucide-react';
 import { User, Conversation, Message } from '../../types';
 import { FirestoreService, SoundService } from '../../services/firebase';
+import { GroupDetailsModal } from './GroupDetailsModal';
 
 interface ChatWindowProps {
   conversation: Conversation;
@@ -16,12 +17,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, user, onBa
   const [sending, setSending] = useState(false);
   const [showFileOptions, setShowFileOptions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showGroupDetails, setShowGroupDetails] = useState(false);
+  const [isMuted, setIsMuted] = useState(SoundService.getIsMuted());
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
-  // Get the other participant
-  const otherParticipant = conversation.participantDetails.find(p => p.uid !== user.uid);
+  useEffect(() => {
+    const handleMuteChange = (e: any) => {
+      setIsMuted(e.detail.isMuted);
+    };
+    window.addEventListener('kathaithal_sound_mute_changed', handleMuteChange);
+    return () => window.removeEventListener('kathaithal_sound_mute_changed', handleMuteChange);
+  }, []);
+
+  const isGroup = !!conversation.isGroup;
+  // Get the other participant (for 1-on-1 direct chats)
+  const otherParticipant = !isGroup
+    ? conversation.participantDetails.find(p => p.uid !== user.uid)
+    : null;
 
   // Common emojis for quick access
   const commonEmojis = [
@@ -189,7 +203,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, user, onBa
       {/* Chat Header */}
       <div className="bg-white/90 backdrop-blur-sm border-b border-primary-200 px-4 py-3 flex items-center justify-between
                       animate-in slide-in-from-top-2 duration-500">
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
           <button
             onClick={() => {
               SoundService.playButtonClick();
@@ -201,8 +215,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, user, onBa
             <ArrowLeft className="w-5 h-5" />
           </button>
           
-          <div className="relative">
-            {otherParticipant?.photoURL ? (
+          <div className="relative flex-shrink-0">
+            {isGroup ? (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary-600 to-indigo-600 text-white flex items-center justify-center border-2 border-primary-200 shadow-md">
+                <Users className="w-5 h-5 text-white" />
+              </div>
+            ) : otherParticipant?.photoURL ? (
               <>
                 <img
                   src={otherParticipant.photoURL}
@@ -221,17 +239,75 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, user, onBa
                 {otherParticipant?.displayName?.charAt(0).toUpperCase() || 'U'}
               </div>
             )}
-            {otherParticipant?.isOnline && (
+            {!isGroup && otherParticipant?.isOnline && (
               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
             )}
           </div>
 
-          <div>
-            <h2 className="font-semibold text-secondary-800">{otherParticipant?.displayName || 'Unknown User'}</h2>
-            <p className="text-sm text-secondary-500">
-              {otherParticipant?.isOnline ? 'Online' : `Last seen ${formatTimestamp(otherParticipant?.lastSeen || new Date())}`}
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold text-secondary-800 truncate">
+              {isGroup ? (conversation.groupName || 'குழு • Group') : (otherParticipant?.displayName || 'Unknown User')}
+            </h2>
+            <p className="text-xs text-secondary-500 truncate">
+              {isGroup
+                ? `${conversation.participants.length} உறுப்பினர்கள் • Members`
+                : otherParticipant?.isOnline ? 'Online' : `Last seen ${formatTimestamp(otherParticipant?.lastSeen || new Date())}`}
             </p>
           </div>
+        </div>
+
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={async () => {
+              const name = isGroup ? conversation.groupName : (otherParticipant?.displayName || 'user');
+              if (!window.confirm(`Delete entire conversation with "${name}"? / இந்த உரையாடலை முழுவதும் நீக்கவா?`)) {
+                return;
+              }
+              SoundService.playButtonClick();
+              try {
+                await FirestoreService.deleteConversation(conversation.id, user.uid);
+                onBack();
+              } catch (err) {
+                console.error('Error deleting conversation:', err);
+                SoundService.playError();
+              }
+            }}
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-xs"
+            title="Delete Conversation (உரையாடலை நீக்கு)"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              SoundService.toggleMute();
+            }}
+            className={`p-2 rounded-xl transition-all shadow-xs ${
+              isMuted
+                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                : 'text-secondary-600 hover:text-primary-600 hover:bg-primary-50'
+            }`}
+            title={isMuted ? 'ஒலி இயக்கு • Unmute Sound' : 'ஒலி முடக்கு • Mute Sound'}
+          >
+            {isMuted ? <VolumeX className="w-4 h-4 text-amber-600" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+
+          {isGroup && (
+            <button
+              type="button"
+              onClick={() => {
+                SoundService.playButtonClick();
+                setShowGroupDetails(true);
+              }}
+              className="px-3 py-1.5 text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-xl transition-all flex items-center space-x-1.5 text-xs font-semibold shadow-xs"
+              title="Group Info"
+            >
+              <Users className="w-4 h-4" />
+              <span>விவரங்கள் • Info</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -255,10 +331,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, user, onBa
             return (
               <div
                 key={msg.id}
-                className={`flex items-end space-x-2 ${isMe ? 'justify-end' : 'justify-start'} 
+                className={`group flex items-end space-x-2 ${isMe ? 'justify-end' : 'justify-start'} 
                            animate-in slide-in-from-bottom-5 fade-in duration-300`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
+                {/* Delete button for my own message */}
+                {isMe && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!window.confirm('Delete this message? / இந்த செய்தியை நீக்கவா?')) return;
+                      SoundService.playButtonClick();
+                      try {
+                        await FirestoreService.deleteMessage(conversation.id, msg.id, user.uid);
+                      } catch (err) {
+                        console.error('Error deleting message:', err);
+                        SoundService.playError();
+                      }
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all order-0 mb-1"
+                    title="Delete Message (செய்தியை நீக்கு)"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
                 {!isMe && (
                   <div className="w-8 h-8 rounded-full bg-primary-500 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0 
                                   animate-in zoom-in duration-200 shadow-md">
@@ -269,6 +365,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, user, onBa
                 <div className={`max-w-xs lg:max-w-md ${isMe ? 'order-1' : 'order-2'} 
                                 animate-in ${isMe ? 'slide-in-from-right-5' : 'slide-in-from-left-5'} 
                                 duration-300`}>
+                  {!isMe && isGroup && (
+                    <p className="text-[11px] font-semibold text-primary-700 ml-2 mb-0.5">
+                      {msg.senderName}
+                    </p>
+                  )}
                   {msg.type === 'text' ? (
                     <div
                       className={`px-4 py-2 rounded-2xl transform transition-all duration-200 hover:scale-105 ${
@@ -349,6 +450,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, user, onBa
                     {formatTimestamp(msg.createdAt)}
                   </p>
                 </div>
+
+                {/* Delete button for incoming message */}
+                {!isMe && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!window.confirm('Delete this message? / இந்த செய்தியை நீக்கவா?')) return;
+                      SoundService.playButtonClick();
+                      try {
+                        await FirestoreService.deleteMessage(conversation.id, msg.id, user.uid);
+                      } catch (err) {
+                        console.error('Error deleting message:', err);
+                        SoundService.playError();
+                      }
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all order-3 mb-1"
+                    title="Delete Message (செய்தியை நீக்கு)"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
 
                 {isMe && (
                   <div className="w-8 h-8 rounded-full bg-primary-600 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
@@ -515,6 +637,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, user, onBa
           </button>
         </form>
       </div>
+
+      {showGroupDetails && (
+        <GroupDetailsModal
+          conversation={conversation}
+          currentUser={user}
+          onClose={() => setShowGroupDetails(false)}
+          onLeaveGroup={onBack}
+        />
+      )}
     </div>
   );
 };

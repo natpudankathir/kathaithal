@@ -7,7 +7,13 @@ import {
   orderBy, 
   serverTimestamp,
   onSnapshot, 
-  limit
+  limit,
+  doc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { COLLECTIONS } from '../constants/firebase';
@@ -91,6 +97,10 @@ export class ConversationService {
     
     for (const doc of docs) {
       const data = doc.data();
+      if (data.isDeleted) {
+        continue;
+      }
+
       console.log('Processing conversation:', doc.id, 'with participants:', data.participants);
       
       // Get participant details
@@ -114,7 +124,14 @@ export class ConversationService {
         lastMessage,
         lastMessageAt: data.lastMessageAt?.toDate() || new Date(),
         unreadCount: data.unreadCount || {},
-        createdAt: data.createdAt?.toDate() || new Date()
+        createdAt: data.createdAt?.toDate() || new Date(),
+        isGroup: !!data.isGroup,
+        groupName: data.groupName || undefined,
+        groupPhotoURL: data.groupPhotoURL || undefined,
+        createdById: data.createdById || undefined,
+        isDeleted: data.isDeleted,
+        deletedAt: data.deletedAt?.toDate(),
+        deletedBy: data.deletedBy
       };
 
       conversationList.push(conversation);
@@ -168,8 +185,9 @@ export class ConversationService {
 
       for (const doc of existingConversations.docs) {
         const data = doc.data();
+        if (data.isDeleted) continue;
         const participants = data.participants || [];
-        if (participants.includes(userId2) && participants.length === 2) {
+        if (participants.includes(userId2) && participants.length === 2 && !data.isGroup) {
           console.log('Found existing conversation:', doc.id);
           return doc.id;
         }
@@ -242,5 +260,89 @@ export class ConversationService {
 
     // Start with indexed subscription
     return tryIndexedSubscription();
+  }
+
+  // Create a new group conversation
+  static async createGroupConversation(
+    groupName: string,
+    participantUids: string[],
+    creatorUid: string
+  ): Promise<string> {
+    try {
+      const allParticipants = Array.from(new Set([creatorUid, ...participantUids]));
+      const conversationRef = await addDoc(collection(db, COLLECTIONS.CONVERSATIONS), {
+        isGroup: true,
+        groupName: groupName.trim(),
+        createdById: creatorUid,
+        participants: allParticipants,
+        createdAt: serverTimestamp(),
+        lastMessageAt: serverTimestamp(),
+        unreadCount: allParticipants.reduce((acc, uid) => {
+          acc[uid] = 0;
+          return acc;
+        }, {} as Record<string, number>)
+      });
+
+      return conversationRef.id;
+    } catch (error) {
+      console.error('Error creating group conversation:', error);
+      throw error;
+    }
+  }
+
+  // Add members to an existing group
+  static async addParticipantsToGroup(conversationId: string, newUserIds: string[]): Promise<void> {
+    try {
+      const convRef = doc(db, COLLECTIONS.CONVERSATIONS, conversationId);
+      await updateDoc(convRef, {
+        participants: arrayUnion(...newUserIds)
+      });
+    } catch (error) {
+      console.error('Error adding participants to group:', error);
+      throw error;
+    }
+  }
+
+  // Remove member from group (or leave group)
+  static async removeParticipantFromGroup(conversationId: string, userId: string): Promise<void> {
+    try {
+      const convRef = doc(db, COLLECTIONS.CONVERSATIONS, conversationId);
+      await updateDoc(convRef, {
+        participants: arrayRemove(userId)
+      });
+    } catch (error) {
+      console.error('Error removing participant from group:', error);
+      throw error;
+    }
+  }
+
+  // Rename group
+  static async updateGroupName(conversationId: string, groupName: string): Promise<void> {
+    try {
+      const convRef = doc(db, COLLECTIONS.CONVERSATIONS, conversationId);
+      await updateDoc(convRef, {
+        groupName: groupName.trim()
+      });
+    } catch (error) {
+      console.error('Error updating group name:', error);
+      throw error;
+    }
+  }
+
+  // Soft delete conversation (marks doc for future purge job)
+  static async deleteConversation(conversationId: string, deletedBy?: string): Promise<void> {
+    try {
+      console.log('Soft-deleting conversation:', conversationId);
+      const convRef = doc(db, COLLECTIONS.CONVERSATIONS, conversationId);
+      await updateDoc(convRef, {
+        isDeleted: true,
+        deletedAt: serverTimestamp(),
+        ...(deletedBy ? { deletedBy } : {})
+      });
+      console.log('Conversation soft-deleted successfully');
+    } catch (error) {
+      console.error('Error soft-deleting conversation:', error);
+      throw error;
+    }
   }
 }

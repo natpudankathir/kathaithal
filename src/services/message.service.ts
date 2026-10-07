@@ -8,6 +8,7 @@ import {
   doc,
   getDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -61,24 +62,29 @@ export class MessageService {
 
       console.log('Found', messages.docs.length, 'messages');
 
-      return messages.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          senderId: data.senderId,
-          senderName: data.senderName,
-          senderPhotoURL: data.senderPhotoURL,
-          content: data.content,
-          type: data.type,
-          readBy: data.readBy || [],
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate(),
-          fileUrl: data.fileUrl,
-          fileName: data.fileName,
-          fileSize: data.fileSize,
-          fileMimeType: data.fileMimeType
-        };
-      });
+      return messages.docs
+        .filter(doc => !doc.data().isDeleted)
+        .map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            senderId: data.senderId,
+            senderName: data.senderName,
+            senderPhotoURL: data.senderPhotoURL,
+            content: data.content,
+            type: data.type,
+            readBy: data.readBy || [],
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate(),
+            fileUrl: data.fileUrl,
+            fileName: data.fileName,
+            fileSize: data.fileSize,
+            fileMimeType: data.fileMimeType,
+            isDeleted: data.isDeleted,
+            deletedAt: data.deletedAt?.toDate(),
+            deletedBy: data.deletedBy
+          };
+        });
     } catch (error) {
       console.error('Error getting messages:', error);
       return [];
@@ -207,6 +213,8 @@ export class MessageService {
         const messages: Message[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
+          if (data.isDeleted) return; // Skip soft-deleted messages in UI
+
           messages.push({
             id: doc.id,
             senderId: data.senderId,
@@ -220,7 +228,10 @@ export class MessageService {
             fileUrl: data.fileUrl,
             fileName: data.fileName,
             fileSize: data.fileSize,
-            fileMimeType: data.fileMimeType
+            fileMimeType: data.fileMimeType,
+            isDeleted: data.isDeleted,
+            deletedAt: data.deletedAt?.toDate(),
+            deletedBy: data.deletedBy
           });
         });
         
@@ -234,6 +245,22 @@ export class MessageService {
     } catch (error) {
       console.error('Error setting up message subscription:', error);
       return () => {};
+    }
+  }
+
+  // Soft delete a message (retains doc & storage for future purge job)
+  static async deleteMessage(conversationId: string, messageId: string, deletedBy?: string): Promise<void> {
+    try {
+      const messageDocRef = doc(db, COLLECTIONS.CONVERSATIONS, conversationId, 'messages', messageId);
+      await updateDoc(messageDocRef, {
+        isDeleted: true,
+        deletedAt: serverTimestamp(),
+        ...(deletedBy ? { deletedBy } : {})
+      });
+      console.log('Message soft-deleted successfully:', messageId);
+    } catch (error) {
+      console.error('Error soft-deleting message:', error);
+      throw error;
     }
   }
 }

@@ -2,6 +2,29 @@
 export class SoundService {
   private static audioContext: AudioContext | null = null;
   private static sounds: Map<string, AudioBuffer> = new Map();
+  private static isMuted: boolean = typeof window !== 'undefined'
+    ? localStorage.getItem('kathaithal_sound_muted') === 'true'
+    : false;
+
+  static getIsMuted(): boolean {
+    return this.isMuted;
+  }
+
+  static setMuted(muted: boolean) {
+    this.isMuted = muted;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kathaithal_sound_muted', muted ? 'true' : 'false');
+      window.dispatchEvent(
+        new CustomEvent('kathaithal_sound_mute_changed', { detail: { isMuted: muted } })
+      );
+    }
+  }
+
+  static toggleMute(): boolean {
+    const nextState = !this.isMuted;
+    this.setMuted(nextState);
+    return nextState;
+  }
 
   // Initialize audio context
   static initialize() {
@@ -114,6 +137,7 @@ export class SoundService {
 
   // Play a sound effect
   static playSound(soundName: string, volume: number = 1) {
+    if (this.isMuted) return;
     if (!this.audioContext || !this.sounds.has(soundName)) {
       return;
     }
@@ -168,7 +192,7 @@ export class SoundService {
 
   // Create a more complex notification sound
   static playComplexNotification() {
-    if (!this.audioContext) return;
+    if (this.isMuted || !this.audioContext) return;
 
     try {
       // Create a melody-like notification
@@ -184,7 +208,7 @@ export class SoundService {
   }
 
   private static createAndPlayTone(frequency: number, duration: number, volume: number) {
-    if (!this.audioContext) return;
+    if (this.isMuted || !this.audioContext) return;
 
     const oscillator = this.audioContext.createOscillator();
     const gainNode = this.audioContext.createGain();
