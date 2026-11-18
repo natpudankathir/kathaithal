@@ -7,6 +7,7 @@ export interface User {
   isOnline: boolean;
   lastSeen: Date;
   createdAt: Date;
+  isGuest?: boolean;
 }
 
 // Friend Request Types

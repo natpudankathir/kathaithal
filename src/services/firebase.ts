@@ -18,7 +18,8 @@ export class FirestoreService {
   // User operations - delegate to UserService and AuthService
   static getUser = UserService.getUser;
   static updateUserOnlineStatus = UserService.updateUserOnlineStatus;
-  static searchUserByEmail = UserService.searchUserByEmail;
+  static searchUser = (term: string) => UserService.searchUser(term);
+  static searchUserByEmail = (term: string) => UserService.searchUserByEmail(term);
   
   // Friend request operations - delegate to UserService
   static sendFriendRequest = UserService.sendFriendRequest;

@@ -1,13 +1,42 @@
-import React from 'react';
-import { MessageCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { MessageCircle, Radio } from 'lucide-react';
 
 interface AuthScreenProps {
   onSignIn: () => void;
+  onSignInAsGuest: (guestName: string) => void;
+  onStartTempChat: () => void;
   loading: boolean;
   error: string | null;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onSignIn, loading, error }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ 
+  onSignIn, 
+  onSignInAsGuest, 
+  onStartTempChat,
+  loading, 
+  error 
+}) => {
+  const [guestStep, setGuestStep] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [nameError, setNameError] = useState('');
+
+  const handleGuestSubmit = () => {
+    const trimmed = guestName.trim();
+    if (!trimmed) {
+      setNameError('பெயர் கொடுங்க • Please enter a name');
+      return;
+    }
+    if (trimmed.length < 2) {
+      setNameError('Minimum 2 characters');
+      return;
+    }
+    if (trimmed.length > 20) {
+      setNameError('Maximum 20 characters');
+      return;
+    }
+    setNameError('');
+    onSignInAsGuest(trimmed);
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-100 via-white to-primary-200 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
@@ -67,6 +96,99 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSignIn, loading, error
               </>
             )}
           </button>
+
+          {/* Divider */}
+          <div className="flex items-center my-4">
+            <div className="flex-1 border-t border-secondary-200" />
+            <span className="px-3 text-xs text-secondary-400 font-medium">அல்லது • or</span>
+            <div className="flex-1 border-t border-secondary-200" />
+          </div>
+
+          {/* Guest Sign In */}
+          {!guestStep ? (
+            <button
+              onClick={() => setGuestStep(true)}
+              disabled={loading}
+              className="w-full bg-secondary-50 border-2 border-secondary-200 text-secondary-600 py-3 px-6 rounded-xl hover:bg-secondary-100 hover:border-secondary-300 transition-all duration-200 font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+              </svg>
+              <span>Continue as Guest</span>
+            </button>
+          ) : (
+            <div className="space-y-3 animate-in slide-in-from-bottom-2 duration-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-7 h-7 bg-secondary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-secondary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-secondary-700">உங்கள் பெயர் • Your guest name</p>
+              </div>
+              <div className="flex space-x-2">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="e.g. Ravi, Priya, Kumar..."
+                    value={guestName}
+                    onChange={(e) => { setGuestName(e.target.value); setNameError(''); }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleGuestSubmit()}
+                    maxLength={20}
+                    autoFocus
+                    className="w-full px-3 py-2.5 border-2 border-secondary-200 rounded-lg focus:ring-2 focus:ring-secondary-300 focus:border-secondary-400 outline-none text-sm text-secondary-800 placeholder-secondary-400 transition-colors"
+                  />
+                  {nameError && (
+                    <p className="text-xs text-red-500 mt-1">{nameError}</p>
+                  )}
+                  {guestName.trim() && (
+                    <p className="text-xs text-secondary-400 mt-1">
+                      Will appear as: <span className="font-semibold text-secondary-600">{guestName.trim()}#XXXXXX</span>
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={handleGuestSubmit}
+                  disabled={loading}
+                  className="px-4 py-2.5 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors font-medium text-sm disabled:opacity-50 flex-shrink-0"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : 'Go'}
+                </button>
+              </div>
+              <button
+                onClick={() => { setGuestStep(false); setGuestName(''); setNameError(''); }}
+                className="text-xs text-secondary-400 hover:text-secondary-600 transition-colors"
+              >
+                ← Back
+              </button>
+            </div>
+          )}
+          <p className="text-center text-xs text-secondary-400 mt-2">
+            Guest chats are saved. No account needed.
+          </p>
+
+          {/* Divider */}
+          <div className="flex items-center my-4">
+            <div className="flex-1 border-t border-secondary-200" />
+            <span className="px-3 text-xs text-secondary-400 font-medium">தற்காலிக • ephemeral</span>
+            <div className="flex-1 border-t border-secondary-200" />
+          </div>
+
+          {/* Temp P2P Chat Button */}
+          <button
+            type="button"
+            onClick={onStartTempChat}
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-amber-50 to-primary-50 border-2 border-amber-200 text-amber-900 py-3 px-6 rounded-xl hover:bg-amber-100 hover:border-amber-300 transition-all duration-200 font-medium flex items-center justify-center space-x-2 shadow-sm"
+          >
+            <Radio className="w-4 h-4 text-amber-600" />
+            <span>Start Temp Chat (P2P • Ephemeral)</span>
+          </button>
+          <p className="text-center text-[11px] text-secondary-400 mt-1.5">
+            Zero trace • Direct device-to-device • Gone on exit
+          </p>
 
           <p className="text-center text-xs text-secondary-500 mt-6">
             By signing in, you agree to our Terms of Service and Privacy Policy

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, LogOut, Search, UserPlus, Users, X, Volume2, VolumeX, Trash2 } from 'lucide-react';
+import { MessageCircle, LogOut, Search, UserPlus, Users, X, Volume2, VolumeX, Trash2, Copy, Check } from 'lucide-react';
 import { User, Conversation } from '../../types';
 import { FirestoreService, SoundService } from '../../services/firebase';
 import { CreateGroupModal } from './CreateGroupModal';
@@ -22,6 +22,18 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
   const [addFriendLoading, setAddFriendLoading] = useState(false);
   const [addFriendError, setAddFriendError] = useState('');
   const [addFriendSuccess, setAddFriendSuccess] = useState('');
+  const [copiedTag, setCopiedTag] = useState(false);
+
+  const handleCopyTag = async () => {
+    try {
+      await navigator.clipboard.writeText(user.displayName);
+      setCopiedTag(true);
+      SoundService.playButtonClick();
+      setTimeout(() => setCopiedTag(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy tag:', err);
+    }
+  };
 
   // Listen to mute state changes across app
   useEffect(() => {
@@ -70,11 +82,11 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
       setAddFriendError('');
       setAddFriendSuccess('');
 
-      // Search for user by email
-      const foundUser = await FirestoreService.searchUserByEmail(addFriendEmail.trim());
+      // Search for user by email or guest ID
+      const foundUser = await FirestoreService.searchUser(addFriendEmail.trim());
       
       if (!foundUser) {
-        setAddFriendError('User not found with this email');
+        setAddFriendError('User not found with this email or Guest ID');
         SoundService.playError();
         return;
       }
@@ -207,8 +219,39 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
                               animate-pulse shadow-md"></div>
             </div>
             <div>
-              <h2 className="font-semibold text-gray-800">{user.displayName}</h2>
-              <p className="text-xs text-gray-500 truncate max-w-[150px]">{maskEmail(user.email)}</p>
+              <div className="flex items-center space-x-1.5">
+                <h2 className="font-semibold text-gray-800 flex items-center gap-1.5 text-sm">
+                  <span>{user.displayName}</span>
+                  {user.isGuest && (
+                    <span className="text-[10px] font-medium bg-amber-100 text-amber-700 px-1.5 py-0.2 rounded-full border border-amber-200">
+                      Guest
+                    </span>
+                  )}
+                </h2>
+                <button
+                  type="button"
+                  onClick={handleCopyTag}
+                  className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-all transform hover:scale-110 active:scale-95"
+                  title="Copy Guest ID (அடையாளத்தை நகலெடு)"
+                >
+                  {copiedTag ? (
+                    <Check className="w-3.5 h-3.5 text-green-600 animate-in zoom-in-50 duration-150" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 truncate max-w-[170px]">
+                {copiedTag ? (
+                  <span className="text-green-600 font-medium animate-in fade-in duration-150">
+                    நகலெடுக்கப்பட்டது! • Copied!
+                  </span>
+                ) : user.isGuest ? (
+                  'விருந்தினர் • Tap copy to share ID'
+                ) : (
+                  maskEmail(user.email)
+                )}
+              </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -265,7 +308,7 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
           <div className="mb-4 p-3 bg-primary-50 rounded-lg border border-primary-200 
                           animate-in slide-in-from-top-3 fade-in duration-300 shadow-md">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-800">Add Friend by Email</h3>
+              <h3 className="text-sm font-medium text-gray-800">Add Friend or Guest • நண்பரைச் சேர்</h3>
               <button
                 onClick={() => {
                   SoundService.playButtonClick();
@@ -281,11 +324,11 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
             </div>
             <div className="flex space-x-2">
               <input
-                type="email"
+                type="text"
                 value={addFriendEmail}
                 onChange={(e) => setAddFriendEmail(e.target.value)}
                 onFocus={() => SoundService.playButtonClick()}
-                placeholder="Enter Gmail address..."
+                placeholder="Email or Guest ID (e.g. Ravi#A3F9B2 or #A3F9B2)..."
                 className="flex-1 px-3 py-2 border border-primary-300 rounded-lg focus:outline-none 
                           focus:ring-2 focus:ring-primary-500 text-sm transition-all duration-300
                           transform focus:scale-[1.02] hover:shadow-md focus:shadow-lg"
@@ -310,6 +353,9 @@ export const FriendsList: React.FC<FriendsListProps> = ({ user, onSignOut, onCon
                 {addFriendLoading ? 'Adding...' : 'Add'}
               </button>
             </div>
+            <p className="text-[11px] text-gray-500 mt-1.5">
+              Enter exact Gmail address or Guest ID (e.g. <span className="font-mono text-primary-700">Name#ID</span> or <span className="font-mono text-primary-700">#CODE</span>). <span className="text-secondary-600 font-medium">Exact match required.</span>
+            </p>
             {addFriendError && (
               <p className="text-red-500 text-xs mt-2 animate-in slide-in-from-top-1 duration-200">{addFriendError}</p>
             )}

@@ -45,8 +45,11 @@ This application follows a clean architecture pattern with clear separation of c
 
 TalkWave leverages the full power of Firebase services to deliver a seamless real-time chat experience:
 
-### **Firebase Authentication**
+### **Firebase Authentication & Guest Modes**
 - **Google Sign-in**: Secure OAuth2 authentication
+- **Guest Sign-in**: Instant anonymous login without credentials (Firebase Anonymous Auth)
+- **User Discovery**: Connect via exact match on email, full guest tag (`Name#ID`), or 6-char guest code (`#CODE`). *Note: Search requires an exact match.*
+- **Temp Chat (P2P Ephemeral)**: Direct browser-to-browser WebRTC chat using PeerJS with zero database persistence.
 - **User Session Management**: Persistent login state
 - **Profile Synchronization**: Automatic user data updates
 - **Security Rules**: Protected user authentication flow

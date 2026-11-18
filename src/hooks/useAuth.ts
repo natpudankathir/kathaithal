@@ -55,6 +55,27 @@ export const useAuth = () => {
     }
   };
 
+  const signInAsGuest = async (guestName: string) => {
+    try {
+      setAuthState(prev => ({ ...prev, loading: true, error: null }));
+
+      const user = await AuthService.signInAsGuest(guestName);
+
+      setAuthState({
+        user,
+        loading: false,
+        error: null
+      });
+    } catch (error) {
+      console.error('Guest sign in error:', error);
+      setAuthState(prev => ({
+        ...prev,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Guest sign in failed'
+      }));
+    }
+  };
+
   const signOut = async () => {
     try {
       setAuthState(prev => ({ ...prev, loading: true }));
@@ -81,6 +102,7 @@ export const useAuth = () => {
     loading: authState.loading,
     error: authState.error,
     signIn,
+    signInAsGuest,
     signOut,
     isAuthenticated: !!authState.user
   };
